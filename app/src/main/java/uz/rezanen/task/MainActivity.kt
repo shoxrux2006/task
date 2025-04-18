@@ -1,6 +1,7 @@
 package uz.rezanen.task
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,7 @@ import uz.rezanen.task.localization.Locales
 import uz.rezanen.task.localization.strings
 import uz.rezanen.task.navigation.NavigationHandler
 import uz.rezanen.task.presentation.addCard.AddCardScreen
+import uz.rezanen.task.presentation.login.LoginScreen
 import uz.rezanen.task.presentation.wallet.WalletScreen
 import uz.rezanen.task.ui.theme.TaskTheme
 
@@ -33,7 +35,7 @@ class MainActivity : ComponentActivity() {
             ProvideStrings(lyricist, LocalStrings) {
 
                 TaskTheme {
-                    Navigator(screen = AddCardScreen(), onBackPressed = {
+                    Navigator(screen = LoginScreen(), onBackPressed = {
                         true
                     }) { navigator ->
                         LaunchedEffect(navigator) {
@@ -41,7 +43,7 @@ class MainActivity : ComponentActivity() {
                                 .launchIn(this)
 
                         }
-                        val currentScreen = navigator.lastItemOrNull ?: WalletScreen()
+                        val currentScreen = navigator.lastItemOrNull ?: LoginScreen()
                         currentScreen.Content()
 
                     }

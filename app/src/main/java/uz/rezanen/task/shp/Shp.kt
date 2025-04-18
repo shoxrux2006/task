@@ -5,7 +5,7 @@ import android.content.Context
 class Shp(private val context: Context) {
     private val shp = context.getSharedPreferences("shp", Context.MODE_PRIVATE)
 
-    fun getString(name: String): String? = shp.getString(name, "")
+    fun getString(name: String): String? = shp.getString(name,"")
     fun removeString(name: String) {
         shp.edit().remove(name).apply()
     }

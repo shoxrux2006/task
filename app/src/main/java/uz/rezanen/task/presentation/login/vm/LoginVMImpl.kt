@@ -1,6 +1,5 @@
 package uz.rezanen.task.presentation.login.vm
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
@@ -22,7 +21,7 @@ class LoginVMImpl(
     private val navigation: AppNavigation,
     private val loginRepository: LoginRepository,
 
-) : LoginVM, ViewModel() {
+    ) : LoginVM, ViewModel() {
 
 
     override fun onEventDispatcher(intent: LoginIntent) = intent {
@@ -90,7 +89,9 @@ class LoginVMImpl(
         container(LoginUIState.Success)
 
     init {
-        if (loginRepository.getPhoneNumber() != null) {
+        if (loginRepository.getPhoneNumber() != null && loginRepository.getPhoneNumber()!!
+                .isNotEmpty()
+        ) {
             viewModelScope.launch {
                 delay(100)
                 navigation.replaceWith(WalletScreen())
