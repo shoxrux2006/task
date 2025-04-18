@@ -91,11 +91,9 @@ class LoginVMImpl(
 
     init {
         if (loginRepository.getPhoneNumber() != null) {
-            Log.d("TTT","phone ${loginRepository.getPhoneNumber()}")
             viewModelScope.launch {
                 delay(100)
                 navigation.replaceWith(WalletScreen())
-                Log.d("TTT","dasdasdadas")
             }
         }
     }

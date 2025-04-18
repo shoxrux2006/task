@@ -1,6 +1,7 @@
 package uz.rezanen.task.presentation.addCard
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -184,7 +185,7 @@ class AddCardScreen : AndroidScreen() {
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
-            AppButton(text = LocalStrings.current.save) {
+            AppButton(enabled = true,text = LocalStrings.current.save) {
 
             }
         }
@@ -203,7 +204,7 @@ class AddCardScreen : AndroidScreen() {
         var transformedText by remember {
             mutableStateOf("")
         }
-        val padding = 8
+        val padding = 16
         val fontSizeSp = 16
         val widthDp = (placeHolder.length * fontSizeSp * 0.6f) + padding * 2
 
@@ -226,9 +227,11 @@ class AddCardScreen : AndroidScreen() {
                 value = value,
                 onValueChange = {
                     if (transformedText.length < placeHolder.length) {
+
                         value = it
                         transformedText = transformation.filter(AnnotatedString(value)).text.text
                         onValueChange(transformedText)
+                        Log.d("TTT","ishla ${transformedText}  ${it}  ${transformedText.length}  ${placeHolder.length} ")
                     }
                 },
                 maxLines = 1,

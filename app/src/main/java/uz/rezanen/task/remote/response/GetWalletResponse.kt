@@ -14,5 +14,5 @@ data class GetWalletResponse(
     @SerialName("active_method")
     val activeMethod: String?,
     @SerialName("active_card_id")
-    val activeCardId: String?,
+    val activeCardId: Int?,
 )

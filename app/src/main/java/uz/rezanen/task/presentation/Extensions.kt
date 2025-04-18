@@ -83,12 +83,17 @@ fun IosSwitch(
 }
 
 @Composable
-fun AppButton(text: String, loading: Boolean = false, onClick: () -> Unit) {
+fun AppButton(
+    text: String,
+    enabled: Boolean? = null,
+    loading: Boolean = false,
+    onClick: () -> Unit
+) {
     Button(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp), shape = RoundedCornerShape(10.dp), onClick = onClick,
-        enabled = !loading
+        enabled = enabled != null && enabled || enabled == null && !loading
     ) {
         if (loading) {
             CircularProgressIndicator(

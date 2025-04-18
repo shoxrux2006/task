@@ -28,7 +28,7 @@ class MainApiService(private val client: HttpClient) {
     }
 
     suspend fun setActiveCard(setActiveCardRequest: SetActiveCardRequest): ApiResult<GetWalletResponse> {
-        return safeRequest(RequestType.PUT, client, "/cards/method", setActiveCardRequest)
+        return safeRequest(RequestType.PUT, client, "/wallet/method", setActiveCardRequest)
     }
 
 

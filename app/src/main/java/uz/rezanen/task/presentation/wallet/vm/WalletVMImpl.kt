@@ -1,7 +1,13 @@
 package uz.rezanen.task.presentation.wallet.vm
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.orbitmvi.orbit.Container
@@ -14,6 +20,8 @@ import uz.rezanen.task.domain.WalletRepository
 import uz.rezanen.task.domain.data.CardItem
 import uz.rezanen.task.navigation.AppNavigation
 import uz.rezanen.task.presentation.addCard.AddCardScreen
+import uz.rezanen.task.remote.request.AddPromoCodeRequest
+import uz.rezanen.task.remote.request.SetActiveCardRequest
 import uz.rezanen.task.shp.Shp
 import uz.rezanen.task.utils.NetworkResponse
 
@@ -24,6 +32,7 @@ class WalletVMImpl(
     private val cardRepository: CardRepository,
     private val navigation: AppNavigation
 ) : WalletVM, ViewModel() {
+    private var cards: List<CardItem>? = listOf()
     override fun onEventDispatcher(intent: WalletIntent) = intent {
         when (intent) {
             WalletIntent.AddCard -> {
@@ -31,13 +40,131 @@ class WalletVMImpl(
             }
 
             WalletIntent.AddPromoCode -> {
-                reduce {
-                    WalletUIState.ShowPromoCodeBottomSheet
-                }
+                postSideEffect(
+                    WalletSideEffect.ShowPromoCodeBottomSheet(showSheet = true)
+                )
             }
 
             is WalletIntent.ChangePaymentMethod -> {
+                viewModelScope.launch {
+                    cardRepository.setActiveCard(
+                        SetActiveCardRequest(
+                            activeMethod = intent.activeMethod, activeCardId = intent.cardId
+                        )
+                    ).collectLatest {
+                        when (it) {
+                            is NetworkResponse.Error -> {
+                                postSideEffect(
+                                    WalletSideEffect.Message(
+                                        it.message,
+                                        color = Color(0xFFFF0000),
+                                        icon = Icons.Filled.Warning
+                                    )
+                                )
+                            }
 
+                            is NetworkResponse.Failure -> {
+                                postSideEffect(WalletSideEffect.Message("Check your code!"))
+                            }
+
+                            is NetworkResponse.Loading -> {
+                                reduce {
+                                    WalletUIState.Loading(
+                                        balanceLoading = it.isLoading,
+                                    )
+                                }
+                            }
+
+                            is NetworkResponse.NoConnection -> {
+                                postSideEffect(
+                                    WalletSideEffect.Message(
+                                        "No connection!",
+                                        color = Color(0xFFFF0000),
+                                        icon = Icons.Outlined.Refresh
+                                    )
+                                )
+                            }
+
+                            is NetworkResponse.Success -> {
+                                it.data?.let { item ->
+                                    reduce {
+                                        WalletUIState.Success(
+                                            activeMethod = item.activeCardId,
+                                            balance = item.balance.toString(),
+                                            cards = cards
+                                        )
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                }
+            }
+
+            is WalletIntent.CheckPromoCode -> {
+                postSideEffect(
+                    WalletSideEffect.ShowPromoCodeBottomSheet(
+                        showSheet = intent.code.length<3,
+                        errorMessage = if (intent.code.length < 3) "Please provide promoCode" else null,
+                    )
+                )
+                if (intent.code.length >= 3) {
+                    viewModelScope.launch {
+                        cardRepository.setPromoCode(
+                            AddPromoCodeRequest(code = intent.code)
+                        ).collectLatest {
+                            when (it) {
+                                is NetworkResponse.Error -> {
+                                    postSideEffect(
+                                        WalletSideEffect.Message(
+                                            it.message,
+                                            color = Color.Red,
+                                            icon = Icons.Filled.Warning
+                                        )
+                                    )
+                                }
+
+                                is NetworkResponse.Failure -> {
+                                    postSideEffect(WalletSideEffect.Message("Check your code!"))
+                                }
+
+                                is NetworkResponse.Loading -> {
+                                    postSideEffect(
+                                        WalletSideEffect.Message(
+                                            "Loading",
+                                            color = Color(0xFF423939),
+                                            icon = Icons.Outlined.Refresh
+                                        )
+                                    )
+                                }
+
+                                is NetworkResponse.NoConnection -> {
+                                    postSideEffect(
+                                        WalletSideEffect.Message(
+                                            "No connection!",
+                                            color = Color(0xFFFF0000),
+                                            icon = Icons.Outlined.Refresh
+                                        )
+                                    )
+                                }
+
+                                is NetworkResponse.Success -> {
+                                    it.data?.let { item ->
+                                        postSideEffect(
+                                            WalletSideEffect.Message(
+                                                "Added!",
+                                                color = Color(0xFF31AA24),
+                                                icon = Icons.Outlined.Done
+                                            )
+                                        )
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -54,11 +181,11 @@ class WalletVMImpl(
             walletRepository.getWallet().collectLatest {
                 when (it) {
                     is NetworkResponse.Error -> {
-                        reduce {
-                            WalletUIState.Error(
-                                it.message
+                        postSideEffect(
+                            WalletSideEffect.Message(
+                                it.message, color = Color(0xFFFF0000), icon = Icons.Filled.Warning
                             )
-                        }
+                        )
                     }
 
                     is NetworkResponse.Failure -> {
@@ -68,22 +195,30 @@ class WalletVMImpl(
                     is NetworkResponse.Loading -> {
                         reduce {
                             WalletUIState.Loading(
-                                balanceLoading = false, cardsLoading = it.isLoading
+                                balanceLoading = it.isLoading,
                             )
                         }
                     }
 
                     is NetworkResponse.NoConnection -> {
-                        postSideEffect(WalletSideEffect.Message("No connection!"))
+                        postSideEffect(
+                            WalletSideEffect.Message(
+                                "No connection!", color = Color.Red, icon = Icons.Outlined.Refresh
+                            )
+                        )
                     }
 
                     is NetworkResponse.Success -> {
-                        reduce {
-                            WalletUIState.Success(
-                                balance = "",
-                                cards = null
-                            )
+                        it.data?.let { item ->
+                            reduce {
+                                WalletUIState.Success(
+                                    activeMethod = item.activeCardId,
+                                    balance = item.balance.toString(),
+                                    cards = cards
+                                )
+                            }
                         }
+
                     }
                 }
             }
@@ -110,38 +245,42 @@ class WalletVMImpl(
                         is NetworkResponse.Loading -> {
                             reduce {
                                 WalletUIState.Loading(
-                                    balanceLoading = false, cardsLoading = it.isLoading
+                                    cardsLoading = it.isLoading
                                 )
                             }
                         }
 
                         is NetworkResponse.NoConnection -> {
-                            postSideEffect(WalletSideEffect.Message("No connection!"))
+                            postSideEffect(
+                                WalletSideEffect.Message(
+                                    "No connection!",
+                                    color = Color(0xFFFF0000),
+                                    icon = Icons.Outlined.Refresh
+                                )
+                            )
                         }
 
                         is NetworkResponse.Success -> {
                             it.data?.let { data ->
-
+                                cards = data.map { item ->
+                                    CardItem(
+                                        item.id, item.number, item.expireDate, item.userId
+                                    )
+                                }.toList()
                                 reduce {
                                     WalletUIState.Success(
-                                        balance = null,
-                                        cards = data.map { item ->
-                                            CardItem(
-                                                item.id,
-                                                item.number,
-                                                item.expireDate,
-                                                item.userId
-                                            )
-                                        }.toList()
+                                        activeMethod = -1, balance = "", cards = cards
                                     )
                                 }
                             }
                         }
                     }
                 }
+                delay(500)
                 refreshCard()
             }
         }
     }
+
 
 }

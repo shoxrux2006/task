@@ -20,10 +20,7 @@ class WalletRepositoryImpl(
         flow<NetworkResponse<GetWalletResponse>> {
             if (hasConnection(context)) {
                 emit(NetworkResponse.Loading(true))
-                val request = client.getWallet(
-
-                )
-                when (request) {
+                when (val request = client.getWallet()) {
                     is ApiResult.Error -> {
                         emit(
                             NetworkResponse.Error(
