@@ -86,7 +86,8 @@ class AddCardVMImpl(
                                             icon = Icons.Outlined.Done
                                         )
                                     )
-
+                                    cardNumber=""
+                                    expireDate=""
                                     delay(1000)
                                     navigation.replaceWith(WalletScreen(addedCard = true))
                                 }

@@ -72,6 +72,7 @@ class LoginVMImpl(
                                     reduce {
                                         LoginUIState.Loading(buttonLoading = false)
                                     }
+                                    loginRepository.setPhoneNumber(intent.phone)
                                     navigation.replaceWith(WalletScreen(addedCard = false))
                                 }
                             }
