@@ -22,16 +22,15 @@ import uz.rezanen.task.navigation.AppNavigation
 import uz.rezanen.task.presentation.addCard.AddCardScreen
 import uz.rezanen.task.remote.request.AddPromoCodeRequest
 import uz.rezanen.task.remote.request.SetActiveCardRequest
-import uz.rezanen.task.shp.Shp
 import uz.rezanen.task.utils.NetworkResponse
 
 
 class WalletVMImpl(
-    private val shp: Shp,
     private val walletRepository: WalletRepository,
     private val cardRepository: CardRepository,
     private val navigation: AppNavigation
 ) : WalletVM, ViewModel() {
+    private var balance: String? = ""
     private var cards: List<CardItem>? = listOf()
     override fun onEventDispatcher(intent: WalletIntent) = intent {
         when (intent) {
@@ -105,7 +104,7 @@ class WalletVMImpl(
             is WalletIntent.CheckPromoCode -> {
                 postSideEffect(
                     WalletSideEffect.ShowPromoCodeBottomSheet(
-                        showSheet = intent.code.length<3,
+                        showSheet = intent.code.length < 3,
                         errorMessage = if (intent.code.length < 3) "Please provide promoCode" else null,
                     )
                 )
@@ -166,6 +165,14 @@ class WalletVMImpl(
                     }
                 }
             }
+
+            WalletIntent.Refresh -> {
+                viewModelScope.launch {
+                    refreshCards()
+                    delay(500)
+                    refreshBalance()
+                }
+            }
         }
 
 
@@ -176,7 +183,7 @@ class WalletVMImpl(
         container(WalletUIState.Initial)
 
 
-    private fun refreshCard() = intent {
+    private fun refreshBalance() = intent {
         viewModelScope.launch {
             walletRepository.getWallet().collectLatest {
                 when (it) {
@@ -210,10 +217,11 @@ class WalletVMImpl(
 
                     is NetworkResponse.Success -> {
                         it.data?.let { item ->
+                            balance = item.balance.toString()
                             reduce {
                                 WalletUIState.Success(
                                     activeMethod = item.activeCardId,
-                                    balance = item.balance.toString(),
+                                    balance = balance,
                                     cards = cards
                                 )
                             }
@@ -225,61 +233,68 @@ class WalletVMImpl(
         }
     }
 
-    init {
-        intent {
-            viewModelScope.launch {
-                cardRepository.getCards().collectLatest {
-                    when (it) {
-                        is NetworkResponse.Error -> {
-                            reduce {
-                                WalletUIState.Error(
-                                    it.message
-                                )
-                            }
-                        }
-
-                        is NetworkResponse.Failure -> {
-                            postSideEffect(WalletSideEffect.Message("Check your code!"))
-                        }
-
-                        is NetworkResponse.Loading -> {
-                            reduce {
-                                WalletUIState.Loading(
-                                    cardsLoading = it.isLoading
-                                )
-                            }
-                        }
-
-                        is NetworkResponse.NoConnection -> {
-                            postSideEffect(
-                                WalletSideEffect.Message(
-                                    "No connection!",
-                                    color = Color(0xFFFF0000),
-                                    icon = Icons.Outlined.Refresh
-                                )
+    private fun refreshCards() = intent {
+        viewModelScope.launch {
+            cardRepository.getCards().collectLatest {
+                when (it) {
+                    is NetworkResponse.Error -> {
+                        reduce {
+                            WalletUIState.Error(
+                                it.message
                             )
                         }
+                    }
 
-                        is NetworkResponse.Success -> {
-                            it.data?.let { data ->
-                                cards = data.map { item ->
-                                    CardItem(
-                                        item.id, item.number, item.expireDate, item.userId
-                                    )
-                                }.toList()
-                                reduce {
-                                    WalletUIState.Success(
-                                        activeMethod = -1, balance = "", cards = cards
-                                    )
-                                }
+                    is NetworkResponse.Failure -> {
+                        postSideEffect(WalletSideEffect.Message("Check your code!"))
+                    }
+
+                    is NetworkResponse.Loading -> {
+                        reduce {
+                            WalletUIState.Loading(
+                                cardsLoading = it.isLoading
+                            )
+                        }
+                    }
+
+                    is NetworkResponse.NoConnection -> {
+                        postSideEffect(
+                            WalletSideEffect.Message(
+                                "No connection!",
+                                color = Color(0xFFFF0000),
+                                icon = Icons.Outlined.Refresh
+                            )
+                        )
+                    }
+
+                    is NetworkResponse.Success -> {
+                        it.data?.let { data ->
+                            cards = data.map { item ->
+                                CardItem(
+                                    item.id, item.number, item.expireDate, item.userId
+                                )
+                            }.toList()
+                            reduce {
+                                WalletUIState.Success(
+                                    activeMethod = -1, balance = balance, cards = cards
+                                )
                             }
                         }
                     }
                 }
-                delay(500)
-                refreshCard()
             }
+
         }
+    }
+
+    init {
+        viewModelScope.launch {
+            refreshCards()
+            delay(500)
+            refreshBalance()
+        }
+
+
     }
 
 

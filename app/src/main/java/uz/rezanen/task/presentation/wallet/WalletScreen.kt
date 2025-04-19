@@ -1,7 +1,6 @@
 package uz.rezanen.task.presentation.wallet
 
 import android.content.Context
-import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,6 +40,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +58,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -87,12 +86,19 @@ import uz.rezanen.task.presentation.wallet.vm.WalletVM
 import uz.rezanen.task.presentation.wallet.vm.WalletVMImpl
 import uz.rezanen.task.utils.Const
 
-class WalletScreen : AndroidScreen() {
+class WalletScreen(var addedCard: Boolean) : AndroidScreen() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val viewModel: WalletVM = getViewModel<WalletVMImpl>()
         val uiState = viewModel.collectAsState().value
+
+       LaunchedEffect(addedCard) {
+           if(addedCard){
+               viewModel.onEventDispatcher(WalletIntent.Refresh)
+               addedCard=false
+           }
+       }
         var sideEffectMessage by remember {
             mutableStateOf("")
         }

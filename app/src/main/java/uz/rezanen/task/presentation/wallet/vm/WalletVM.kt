@@ -8,6 +8,7 @@ import uz.rezanen.task.utils.AppViewModel
 interface WalletVM : AppViewModel<WalletIntent, WalletUIState, WalletSideEffect> {}
 
 sealed class WalletIntent {
+    data object Refresh : WalletIntent()
     data object AddCard : WalletIntent()
     data object AddPromoCode : WalletIntent()
     data class CheckPromoCode(val code: String) : WalletIntent()

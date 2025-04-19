@@ -47,6 +47,6 @@ val mainModule = module {
     viewModel { LoginVMImpl(get(), get()) }
     factory<LoginVM> { get<LoginVMImpl>() }
 
-    viewModel { WalletVMImpl(get(), get(), get(), get()) }
+    viewModel { WalletVMImpl(get(), get(), get()) }
     factory<WalletVM> { get<WalletVMImpl>() }
 }

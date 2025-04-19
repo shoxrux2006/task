@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
             ProvideStrings(lyricist, LocalStrings) {
 
                 TaskTheme {
-                    Navigator(screen = LoginScreen(), onBackPressed = {
+                    Navigator(screen = WalletScreen(false), onBackPressed = {
                         true
                     }) { navigator ->
                         LaunchedEffect(navigator) {
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
                                 .launchIn(this)
 
                         }
-                        val currentScreen = navigator.lastItemOrNull ?: LoginScreen()
+                        val currentScreen = navigator.lastItemOrNull ?: WalletScreen(false)
                         currentScreen.Content()
 
                     }

@@ -44,7 +44,7 @@ class LoginVMImpl(
                                     }
                                     if (it.statusCode != null && it.statusCode == 409) {
                                         loginRepository.setPhoneNumber(intent.phone)
-                                        navigation.replaceWith(WalletScreen())
+                                        navigation.replaceWith(WalletScreen(addedCard = false))
                                     }
                                 }
 
@@ -72,7 +72,7 @@ class LoginVMImpl(
                                     reduce {
                                         LoginUIState.Loading(buttonLoading = false)
                                     }
-                                    navigation.replaceWith(WalletScreen())
+                                    navigation.replaceWith(WalletScreen(addedCard = false))
                                 }
                             }
                         }
@@ -94,7 +94,7 @@ class LoginVMImpl(
         ) {
             viewModelScope.launch {
                 delay(100)
-                navigation.replaceWith(WalletScreen())
+                navigation.replaceWith(WalletScreen(addedCard = false))
             }
         }
     }

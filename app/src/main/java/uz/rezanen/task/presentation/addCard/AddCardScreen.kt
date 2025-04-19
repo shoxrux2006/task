@@ -1,9 +1,9 @@
 package uz.rezanen.task.presentation.addCard
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,11 +24,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,12 +34,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -49,12 +50,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.androidx.AndroidScreen
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.getViewModel
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import uz.rezanen.task.localization.LocalStrings
 import uz.rezanen.task.presentation.AppButton
+import uz.rezanen.task.presentation.FloatingTopToast
 import uz.rezanen.task.presentation.addCard.vm.AddCardIntent
 import uz.rezanen.task.presentation.addCard.vm.AddCardSideEffect
 import uz.rezanen.task.presentation.addCard.vm.AddCardUIState
@@ -69,9 +71,16 @@ class AddCardScreen : AndroidScreen() {
         val uiState = viewModel.collectAsState().value
         val coroutineScope = rememberCoroutineScope()
         val snackBarHost = remember { SnackbarHostState() }
-        val sideEffectMessage by remember {
+        var sideEffectMessage by remember {
             mutableStateOf("")
         }
+        var sideEffectColor: Color? by remember {
+            mutableStateOf(null)
+        }
+        var sideEffectIcon: ImageVector? by remember {
+            mutableStateOf(null)
+        }
+        var showToast by remember { mutableStateOf(false) }
         var context: Context? by remember {
             mutableStateOf(null)
         }
@@ -79,45 +88,51 @@ class AddCardScreen : AndroidScreen() {
         viewModel.collectSideEffect {
             when (it) {
                 is AddCardSideEffect.Message -> {
-
-
+                    sideEffectIcon = it.icon
+                    sideEffectColor = it.color
+                    sideEffectMessage = it.message
+                    showToast = true
+                    delay(2000)
+                    showToast = false
                 }
             }
         }
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackBarHost) }
-        ) { a ->
-            Button(modifier = Modifier.padding(a), onClick = {
-                coroutineScope.launch {
-                    snackBarHost.showSnackbar(sideEffectMessage, actionLabel = "OK")
-                }
-            }) {
-                Text("Show Status")
+        Box {
+            MainScreenContent(uiState, viewModel::onEventDispatcher)
+            FloatingTopToast(
+                icon = sideEffectIcon ?: Icons.Outlined.Info,
+                color = sideEffectColor ?: MaterialTheme.colorScheme.primary,
+                message = sideEffectMessage,
+                show = showToast,
+            ) {
+
             }
         }
-        MainScreenContent(uiState, viewModel::onEventDispatcher)
     }
 
     @Composable
     fun MainScreenContent(uiState: AddCardUIState, onEventDispatcher: (AddCardIntent) -> Unit) {
-        var errorEmail by remember {
-            mutableStateOf("")
-        }
 
-        var textEmail by remember {
-            mutableStateOf("")
+        var saveButtonEnabled by rememberSaveable {
+            mutableStateOf(false)
         }
-        var errorPassword by remember {
-            mutableStateOf("")
-        }
-        var textPassword by remember {
-            mutableStateOf("")
+        var saveButtonLoading by rememberSaveable {
+            mutableStateOf(false)
         }
 
         when (uiState) {
             is AddCardUIState.Error -> {}
-            is AddCardUIState.Loading -> {}
+            is AddCardUIState.Loading -> {
+                saveButtonLoading = uiState.isLoading
+                uiState.enableSaveButton?.let {
+                    saveButtonEnabled = it
+                }
+            }
+
             AddCardUIState.Success -> {}
+            is AddCardUIState.DataFilled -> {
+                saveButtonEnabled = uiState.enableSaveButton
+            }
         }
 
 
@@ -141,6 +156,9 @@ class AddCardScreen : AndroidScreen() {
                         .size(48.dp)
                         .shadow(5.dp, shape = CircleShape)
                         .clip(CircleShape)
+                        .clickable {
+                            onEventDispatcher.invoke(AddCardIntent.BackButton)
+                        }
                         .background(MaterialTheme.colorScheme.secondary),
 
                     contentAlignment = Alignment.Center
@@ -172,21 +190,33 @@ class AddCardScreen : AndroidScreen() {
             ) {
                 Column(modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp)) {
                     Spacer(modifier = Modifier.weight(1f))
-                    MiniTextField("0000 0000 0000 0000", "####-####-####-####") {
-
+                    MiniTextField(
+                        actualLength = 16,
+                        placeHolder = "0000 0000 0000 0000",
+                        transformationText = "####-####-####-####"
+                    ) {
+                        onEventDispatcher.invoke(AddCardIntent.EditingCardNumber(it))
                     }
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    MiniTextField("00/00", "##/##") {
-
+                    MiniTextField(
+                        actualLength = 4,
+                        placeHolder = "00/00",
+                        transformationText = "##/##"
+                    ) {
+                        onEventDispatcher.invoke(AddCardIntent.EditingExpireDate(it))
                     }
 
 
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
-            AppButton(enabled = true,text = LocalStrings.current.save) {
-
+            AppButton(
+                enabled = saveButtonEnabled && !saveButtonLoading,
+                loading = saveButtonLoading,
+                text = LocalStrings.current.save
+            ) {
+                onEventDispatcher.invoke(AddCardIntent.SubmitButton)
             }
         }
 
@@ -196,12 +226,13 @@ class AddCardScreen : AndroidScreen() {
     fun MiniTextField(
         placeHolder: String,
         transformationText: String,
+        actualLength: Int,
         onValueChange: (String) -> Unit,
     ) {
-        var value by remember {
+        var value by rememberSaveable {
             mutableStateOf("")
         }
-        var transformedText by remember {
+        var transformedText by rememberSaveable {
             mutableStateOf("")
         }
         val padding = 16
@@ -226,13 +257,13 @@ class AddCardScreen : AndroidScreen() {
             BasicTextField(
                 value = value,
                 onValueChange = {
-                    if (transformedText.length < placeHolder.length) {
-
+                    if (it.length <= actualLength) {
                         value = it
                         transformedText = transformation.filter(AnnotatedString(value)).text.text
                         onValueChange(transformedText)
-                        Log.d("TTT","ishla ${transformedText}  ${it}  ${transformedText.length}  ${placeHolder.length} ")
+
                     }
+
                 },
                 maxLines = 1,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
