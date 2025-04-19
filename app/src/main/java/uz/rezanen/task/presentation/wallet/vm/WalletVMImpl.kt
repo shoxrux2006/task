@@ -31,6 +31,7 @@ class WalletVMImpl(
     private val navigation: AppNavigation
 ) : WalletVM, ViewModel() {
     private var balance: String? = ""
+    private var activeId: Int? = -1
     private var cards: List<CardItem>? = listOf()
     override fun onEventDispatcher(intent: WalletIntent) = intent {
         when (intent) {
@@ -217,10 +218,11 @@ class WalletVMImpl(
 
                     is NetworkResponse.Success -> {
                         it.data?.let { item ->
+                            activeId = item.activeCardId
                             balance = item.balance.toString()
                             reduce {
                                 WalletUIState.Success(
-                                    activeMethod = item.activeCardId,
+                                    activeMethod = activeId,
                                     balance = balance,
                                     cards = cards
                                 )
@@ -276,7 +278,7 @@ class WalletVMImpl(
                             }.toList()
                             reduce {
                                 WalletUIState.Success(
-                                    activeMethod = -1, balance = balance, cards = cards
+                                    activeMethod = activeId, balance = balance, cards = cards
                                 )
                             }
                         }
